@@ -24,6 +24,7 @@ print(colorama.Fore.YELLOW + "|__|  |__|__|_____|_____|__|__|")
 
 # Reset colors back
 print(colorama.Style.RESET_ALL)
+print("Exit with double CTRL-C")
 
 # Setup argument parser
 argparser = argparse.ArgumentParser(description="- Tool for timelapsing pxls.space")
@@ -48,10 +49,10 @@ FRAMERATE = args.framerate
 def place_pixel(x, y, color):
     world[x][y] = color_palette[color]
 
-def use_boarddata(array):
+def use_boarddata(array, width, height):
     counter = 0
-    for x in range(0, int(info["width"])):
-        for y in range(0, int(info["height"])):
+    for x in range(0, width):
+        for y in range(0, height):
             place_pixel(x, y, array[counter])
             counter += 1
 
@@ -93,24 +94,30 @@ def on_close(ws):
 if args.veryverbose:
     websocket.enableTrace(True)
 
-if args.verbose or args.veryverbose:
-    print("Downloading info file ...")
-info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
-if args.verbose or args.veryverbose:
-    print("Downloading initial board data ...")
-boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
-if args.verbose or args.veryverbose:
-    print("Spawning world ...")
-world = numpy.zeros((int(info["width"]), int(info["height"]), 3), dtype=numpy.uint8)
-color_palette = create_palette(info["palette"])
-if args.verbose or args.veryverbose:
-    print("Feeding world with initial data ...")
-use_boarddata(boarddata)
-if args.verbose or args.veryverbose:
-    print("Connecting to the server ...")
-ws = websocket.WebSocketApp("ws://pxls.space/ws",
-                            on_message = on_message,
-                            on_error = on_error,
-                            on_close = on_close)
-ws.on_open = on_open
-ws.run_forever()
+while True:
+    if args.verbose or args.veryverbose:
+        print("Downloading info file ...")
+    info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
+    if args.verbose or args.veryverbose:
+        print("Downloading initial board data ...")
+    boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
+    if args.verbose or args.veryverbose:
+        print("Spawning world ...")
+    world = numpy.zeros((int(info["width"]), int(info["height"]), 3), dtype=numpy.uint8)
+    color_palette = create_palette(info["palette"])
+    if args.verbose or args.veryverbose:
+        print("Feeding world with initial data ...")
+    use_boarddata(boarddata, int(info["width"]), int(info["height"]))
+    if args.verbose or args.veryverbose:
+        print("Connecting to the server ...")
+    ws = websocket.WebSocketApp("ws://pxls.space/ws",
+                                on_message = on_message,
+                                on_error = on_error,
+                                on_close = on_close)
+    ws.on_open = on_open
+    ws.run_forever()
+
+    if args.verbose or args.veryverbose:
+        print("Reconnecting in 5 seconds ...")
+
+    time.sleep(5)
