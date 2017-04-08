@@ -77,11 +77,13 @@ def on_error(ws, error):
 def on_open(ws):
     if args.verbose or args.veryverbose:
         print("Connected !")
-    def run(*args):
+    def run(*arguments):
         while True:
+            if args.verbose or args.veryverbose:
+                print("Taking screenshot ...")
             img = Image.fromarray(world, "RGB")
             img.save(PATH + "/" + strftime("%Y-%m-%d-%H-%M-%S", gmtime()) + ".png")
-            time.sleep(FRAMERATE)
+            time.sleep(FRAMERATE)       
     _thread.start_new_thread(run, ())    
 
 def on_close(ws):
