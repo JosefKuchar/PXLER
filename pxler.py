@@ -97,10 +97,22 @@ if args.veryverbose:
 while True:
     if args.verbose or args.veryverbose:
         print("Downloading info file ...")
-    info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
+    try:
+        info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
+    except:
+        if args.verbose or args.veryverbose:
+            print("Download failed, retrying ...")
+        continue
+
     if args.verbose or args.veryverbose:
         print("Downloading initial board data ...")
-    boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
+    try:
+        boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
+    except:
+        if args.verbose or args.veryverbose:
+            print("Download failed, retrying ...")
+        continue
+    
     if args.verbose or args.veryverbose:
         print("Spawning world ...")
     world = numpy.zeros((int(info["width"]), int(info["height"]), 3), dtype=numpy.uint8)
@@ -110,10 +122,16 @@ while True:
     use_boarddata(boarddata, int(info["width"]), int(info["height"]))
     if args.verbose or args.veryverbose:
         print("Connecting to the server ...")
-    ws = websocket.WebSocketApp("ws://pxls.space/ws",
-                                on_message = on_message,
-                                on_error = on_error,
-                                on_close = on_close)
+    
+    try:
+        ws = websocket.WebSocketApp("ws://pxls.space/ws",
+                                    on_message = on_message,
+                                    on_error = on_error,
+                                    on_close = on_close)
+    except:
+        if args.verbose or args.veryverbose:
+            print("Connection failed, retrying ...")
+        continue
     ws.on_open = on_open
     ws.run_forever()
 
