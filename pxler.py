@@ -67,11 +67,12 @@ def on_message(ws, message):
     msg = json.loads(message)
 
     if msg["type"] == "pixel":
-        place_pixel(int(msg["y"]), int(msg["x"]), int(msg["color"]))
 
-        if args.veryverbose:
-            print ("Updated pixel at " + str(msg["y"]) + ":" + str(msg["x"]) + " with color " + str(msg["color"]))
+        for pixel in msg["pixels"]:
+            place_pixel(pixel["y"], pixel["x"], pixel["color"])
 
+            if args.veryverbose:
+                print ("Updated pixel at " + str(pixel["y"]) + ":" + str(pixel["x"]) + " with color " + str(pixel["color"]))
 def on_error(ws, error):
     print(error)
 
