@@ -16,7 +16,7 @@ setup(
     license = "GPLv3",
     keywords = "space pxls timelapse python websocket",
     url = "https://github.com/JosefKuchar/PXLER",
-    long_description = read("readme.md"),
+    long_description = read("README.md"),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Topic :: Utilities",
