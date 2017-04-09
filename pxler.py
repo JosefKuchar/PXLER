@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
-import websocket
-import _thread
-import time
 import urllib.request
+import time
 import json
-import numpy
-import colorama
 import argparse
 import os
-from time import gmtime, strftime
+import websocket
+import _thread
+import numpy
+import colorama
 from PIL import Image
 
 PATH = ""
-FRAMERATE = 0
 READY = False
 
 # Init colors
@@ -24,10 +22,8 @@ print(colorama.Fore.YELLOW + " _____ __ __ __    _____ _____")
 print(colorama.Fore.YELLOW + "|  _  |  |  |  |  |   __| __  |")
 print(colorama.Fore.YELLOW + "|   __|-   -|  |__|   __|    -|")
 print(colorama.Fore.YELLOW + "|__|  |__|__|_____|_____|__|__|")
-
-# Reset colors back
-print(colorama.Style.RESET_ALL)
-print("Exit with double CTRL-C")
+print(colorama.Style.RESET_ALL + "https://github.com/JosefKuchar/PXLER\n")
+print("Exit with double CTRL-C\n")
 
 # Setup argument parser
 argparser = argparse.ArgumentParser(description="- Tool for timelapsing pxls.space")
@@ -43,16 +39,18 @@ args = argparser.parse_args()
 if os.path.exists(os.path.abspath(args.path[0])):
     PATH = os.path.abspath(args.path[0])
 else:
-    argparser.error("This path does not exists");
+    argparser.error("This path does not exists")
 
-# Framerate
-FRAMERATE = args.framerate
-
+def log(string):
+    """ Custom logging function """
+    print(colorama.Fore.CYAN + "[" + colorama.Style.RESET_ALL + time.strftime("%d.%m.%Y - %H:%M:%S") + colorama.Fore.CYAN + "] " + colorama.Style.RESET_ALL + string)
 
 def place_pixel(x, y, color):
+    """ Transform color value to RGB """
     world[x][y] = color_palette[color]
 
 def use_boarddata(array, width, height):
+    """ Transform 1D array to 2D and replace color values with RGB """
     counter = 0
     for x in range(0, width):
         for y in range(0, height):
@@ -60,13 +58,16 @@ def use_boarddata(array, width, height):
             counter += 1
 
 def create_palette(array):
+    """ Transform hex string to rgb values """
     palette = []
     for color in array:
         hexcolor = color.lstrip('#')
-        palette.append(tuple(int(hexcolor[i:i+2], 16) for i in (0, 2 ,4)))
+        palette.append(tuple(int(hexcolor[i:i+2], 16) for i in (0, 2, 4)))
     return palette
 
-def on_message(ws, message):
+
+def on_message(websoc, message):
+    """ Websocket message handler """
     msg = json.loads(message)
 
     if msg["type"] == "pixel":
@@ -75,29 +76,32 @@ def on_message(ws, message):
             place_pixel(pixel["y"], pixel["x"], pixel["color"])
 
             if args.veryverbose:
-                print ("Updated pixel at " + str(pixel["y"]) + ":" + str(pixel["x"]) + " with color " + str(pixel["color"]))
-def on_error(ws, error):
-    print(error)
+                log("Updated pixel at " + str(pixel["y"]) + ":" + str(pixel["x"]) + " with color " + str(pixel["color"]))
+def on_error(websoc, error):
+    """ Websocket error handler """
+    log(error)
 
-def on_open(ws):
+def on_open(websoc):
+    """ Websocket connection open handler """
     if args.verbose or args.veryverbose:
-        print("Connected !")
+        log("Connected !")
     global READY
     READY = True
 
-def run(*arguments):
-    global READY
+def run():
+    """ Screenshot thread """
     while True:
         if READY:
             if args.verbose or args.veryverbose:
-                print("Taking screenshot ...")
+                log("Taking screenshot ...")
             img = Image.fromarray(world, "RGB")
-            img.save(PATH + "/" + strftime("%Y-%m-%d-%H-%M-%S", gmtime()) + ".png")
-        time.sleep(FRAMERATE)    
+            img.save(PATH + "/" + time.strftime("%Y%m%d-%H%M%S") + ".png")
+        time.sleep(int(args.framerate))
 
-def on_close(ws):
+def on_close(websoc):
+    """ Websocket connection close handler """
     if args.verbose or args.veryverbose:
-        print("Connection closed!")
+        log("Connection closed!")
 
 if args.veryverbose:
     websocket.enableTrace(True)
@@ -106,43 +110,40 @@ _thread.start_new_thread(run, ())
 
 while True:
     if args.verbose or args.veryverbose:
-        print("Downloading info file ...")
+        log("Downloading info file ...")
     try:
         info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
     except:
         if args.verbose or args.veryverbose:
-            print("Download failed, retrying ...")
+            log("Download failed, retrying ...")
         READY = False
         continue
 
     if args.verbose or args.veryverbose:
-        print("Downloading initial board data ...")
+        log("Downloading initial board data ...")
     try:
         boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
     except:
         if args.verbose or args.veryverbose:
-            print("Download failed, retrying ...")
+            log("Download failed, retrying ...")
         READY = False
         continue
-    
+
     if args.verbose or args.veryverbose:
-        print("Spawning world ...")
+        log("Spawning world ...")
     world = numpy.zeros((int(info["width"]), int(info["height"]), 3), dtype=numpy.uint8)
     color_palette = create_palette(info["palette"])
     if args.verbose or args.veryverbose:
-        print("Feeding world with initial data ...")
+        log("Feeding world with initial data ...")
     use_boarddata(boarddata, int(info["width"]), int(info["height"]))
     if args.verbose or args.veryverbose:
-        print("Connecting to the server ...")
-    
+        log("Connecting to the server ...")
+
     try:
-        ws = websocket.WebSocketApp("ws://pxls.space/ws",
-                                    on_message = on_message,
-                                    on_error = on_error,
-                                    on_close = on_close)
+        ws = websocket.WebSocketApp("ws://pxls.space/ws", on_message=on_message, on_error=on_error, on_close=on_close)
     except:
         if args.verbose or args.veryverbose:
-            print("Connection failed, retrying ...")
+            log("Connection failed, retrying ...")
         READY = False
         continue
     ws.on_open = on_open
@@ -151,6 +152,6 @@ while True:
     READY = False
 
     if args.verbose or args.veryverbose:
-        print("Reconnecting in 5 seconds ...")
+        log("Reconnecting in 5 seconds ...")
 
     time.sleep(5)
