@@ -5,10 +5,12 @@ import time
 import json
 import argparse
 import os
+import sys
 import websocket
 import _thread
 import numpy
 import colorama
+import signal
 from PIL import Image
 
 PATH = ""
@@ -103,39 +105,66 @@ def on_close(websoc):
     if args.verbose or args.veryverbose:
         log("Connection closed!")
 
+def exit_handler(signal, frame):
+    """ Ctrl-C handler """
+    log("Exiting")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, exit_handler)
+
 if args.veryverbose:
     websocket.enableTrace(True)
 
 _thread.start_new_thread(run, ())
 
 while True:
+    # Download info file with width, height and palette
     if args.verbose or args.veryverbose:
         log("Downloading info file ...")
-    try:
-        info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
-    except:
-        if args.verbose or args.veryverbose:
-            log("Download failed, retrying ...")
-        READY = False
-        continue
 
+    while True:
+        try:
+            info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
+        except:
+            if args.verbose or args.veryverbose:
+                log("Download failed, retrying ...")
+            time.sleep(5)
+            continue
+        break
+    
+
+    # Download complete board data
     if args.verbose or args.veryverbose:
         log("Downloading initial board data ...")
-    try:
-        boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
-    except:
-        if args.verbose or args.veryverbose:
-            log("Download failed, retrying ...")
-        READY = False
-        continue
 
+    while True:
+        try:
+            boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
+        except:
+            if args.verbose or args.veryverbose:
+                log("Download failed, retrying ...")
+            time.sleep(5)
+            continue
+        break
+    
+
+    # Initialize empty array
     if args.verbose or args.veryverbose:
         log("Spawning world ...")
     world = numpy.zeros((int(info["width"]), int(info["height"]), 3), dtype=numpy.uint8)
+
+
+    # Create palette from info
     color_palette = create_palette(info["palette"])
+
+
+    # Use complete world data
     if args.verbose or args.veryverbose:
         log("Feeding world with initial data ...")
     use_boarddata(boarddata, int(info["width"]), int(info["height"]))
+
+
+    # Establish connection to main websocket server
     if args.verbose or args.veryverbose:
         log("Connecting to the server ...")
 
@@ -144,13 +173,16 @@ while True:
     except:
         if args.verbose or args.veryverbose:
             log("Connection failed, retrying ...")
-        READY = False
+        time.sleep(5)
         continue
     ws.on_open = on_open
     ws.run_forever()
 
     READY = False
 
+
+
+    # Retry connection on disconnect
     if args.verbose or args.veryverbose:
         log("Reconnecting in 5 seconds ...")
 
