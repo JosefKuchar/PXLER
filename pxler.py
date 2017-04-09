@@ -88,7 +88,6 @@ def on_open(ws):
 def run(*arguments):
     global READY
     while True:
-        print(READY)
         if READY:
             if args.verbose or args.veryverbose:
                 print("Taking screenshot ...")
