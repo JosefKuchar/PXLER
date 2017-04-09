@@ -12,6 +12,7 @@ from PIL import Image
 
 PATH = ""
 FRAMERATE = 0
+READY = False
 
 # Init colors
 colorama.init()
@@ -79,14 +80,19 @@ def on_error(ws, error):
 def on_open(ws):
     if args.verbose or args.veryverbose:
         print("Connected !")
-    def run(*arguments):
-        while True:
+    global READY
+    READY = True
+
+def run(*arguments):
+    global READY
+    while True:
+        print(READY)
+        if READY:
             if args.verbose or args.veryverbose:
                 print("Taking screenshot ...")
             img = Image.fromarray(world, "RGB")
             img.save(PATH + "/" + strftime("%Y-%m-%d-%H-%M-%S", gmtime()) + ".png")
-            time.sleep(FRAMERATE)       
-    _thread.start_new_thread(run, ())    
+        time.sleep(FRAMERATE)    
 
 def on_close(ws):
     if args.verbose or args.veryverbose:
@@ -94,6 +100,8 @@ def on_close(ws):
 
 if args.veryverbose:
     websocket.enableTrace(True)
+
+_thread.start_new_thread(run, ())
 
 while True:
     if args.verbose or args.veryverbose:
@@ -103,6 +111,7 @@ while True:
     except:
         if args.verbose or args.veryverbose:
             print("Download failed, retrying ...")
+        READY = False
         continue
 
     if args.verbose or args.veryverbose:
@@ -112,6 +121,7 @@ while True:
     except:
         if args.verbose or args.veryverbose:
             print("Download failed, retrying ...")
+        READY = False
         continue
     
     if args.verbose or args.veryverbose:
@@ -132,9 +142,12 @@ while True:
     except:
         if args.verbose or args.veryverbose:
             print("Connection failed, retrying ...")
+        READY = False
         continue
     ws.on_open = on_open
     ws.run_forever()
+
+    READY = False
 
     if args.verbose or args.veryverbose:
         print("Reconnecting in 5 seconds ...")
