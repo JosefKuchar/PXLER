@@ -33,8 +33,12 @@ argparser = argparse.ArgumentParser(description="- Tool for timelapsing pxls.spa
 # Add arguments
 argparser.add_argument("path", type=str, nargs=1, help="Screenshot folder, must exist")
 argparser.add_argument("--frame-rate", dest="framerate", action="store", type=int, default=5, help="Frame rate in seconds")
+argparser.add_argument("--server", dest="server", action="store", default="pxls.space", help="Alternative server")
+argparser.add_argument("--format", dest="format", action="store", default="png", help="Image format - png or jpg")
+argparser.add_argument("--quality", dest="quality", action="store", type=int, default=100, help="JPEG image quality - 0 - 100")
 argparser.add_argument("-v", dest="verbose", action="store_const", const=True, default=False, help="Verbose mode")
 argparser.add_argument("-vv", dest="veryverbose", action="store_const", const=True, default=False, help="Very verbose mode")
+
 args = argparser.parse_args()
 
 # Check if path exists
@@ -42,6 +46,18 @@ if os.path.exists(os.path.abspath(args.path[0])):
     PATH = os.path.abspath(args.path[0])
 else:
     argparser.error("This path does not exists")
+
+# Check if format is valid
+if args.format != "png" and args.format != "jpg":
+    argparser.error("This format is not valid")
+
+# Check quality range
+if args.quality < 0 or args.quality > 100:
+    argparser.error("This quality is not valid")
+
+# Quality only on jpeg check
+if args.format == "png" and args.quality != 100:
+    argparser.error("You cannot use quality option with png")
 
 def log(string):
     """ Custom logging function """
@@ -97,8 +113,8 @@ def run():
             if args.verbose or args.veryverbose:
                 log("Taking screenshot ...")
             img = Image.fromarray(world, "RGB")
-            img.save(PATH + "/" + time.strftime("%Y%m%d-%H%M%S") + ".png")
-        time.sleep(int(args.framerate))
+            img.save(PATH + "/" + time.strftime("%Y%m%d-%H%M%S") + "." + args.format, quality=args.quality)
+        time.sleep(args.framerate)
 
 def on_close(websoc):
     """ Websocket connection close handler """
@@ -124,14 +140,14 @@ while True:
 
     while True:
         try:
-            info = json.loads(urllib.request.urlopen("http://pxls.space/info").read().decode("utf-8"))
+            info = json.loads(urllib.request.urlopen("http://" + args.server + "/info").read().decode("utf-8"))
         except:
             if args.verbose or args.veryverbose:
                 log("Download failed, retrying ...")
             time.sleep(5)
             continue
         break
-    
+
 
     # Download complete board data
     if args.verbose or args.veryverbose:
@@ -139,14 +155,14 @@ while True:
 
     while True:
         try:
-            boarddata = numpy.fromstring(urllib.request.urlopen("http://pxls.space/boarddata").read(), dtype=numpy.uint8)
+            boarddata = numpy.fromstring(urllib.request.urlopen("http://" + args.server + "/boarddata").read(), dtype=numpy.uint8)
         except:
             if args.verbose or args.veryverbose:
                 log("Download failed, retrying ...")
             time.sleep(5)
             continue
         break
-    
+
 
     # Initialize empty array
     if args.verbose or args.veryverbose:
@@ -169,7 +185,7 @@ while True:
         log("Connecting to the server ...")
 
     try:
-        ws = websocket.WebSocketApp("ws://pxls.space/ws", on_message=on_message, on_error=on_error, on_close=on_close)
+        ws = websocket.WebSocketApp("ws://" + args.server + "/ws", on_message=on_message, on_error=on_error, on_close=on_close)
     except:
         if args.verbose or args.veryverbose:
             log("Connection failed, retrying ...")
