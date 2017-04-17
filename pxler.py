@@ -140,7 +140,9 @@ while True:
 
     while True:
         try:
-            info = json.loads(urllib.request.urlopen("http://" + args.server + "/info").read().decode("utf-8"))
+            request = urllib.request.Request("http://" + args.server + "/info")
+            request.add_header("Cookie", "pxls-agegate=1")
+            info = json.loads(urllib.request.urlopen(request).read().decode("utf-8"))
         except:
             if args.verbose or args.veryverbose:
                 log("Download failed, retrying ...")
@@ -155,7 +157,9 @@ while True:
 
     while True:
         try:
-            boarddata = numpy.fromstring(urllib.request.urlopen("http://" + args.server + "/boarddata").read(), dtype=numpy.uint8)
+            request = urllib.request.Request("http://" + args.server + "/boarddata")
+            request.add_header("Cookie", "pxls-agegate=1")
+            boarddata = numpy.fromstring(urllib.request.urlopen(request).read(), dtype=numpy.uint8)
         except:
             if args.verbose or args.veryverbose:
                 log("Download failed, retrying ...")
@@ -185,7 +189,7 @@ while True:
         log("Connecting to the server ...")
 
     try:
-        ws = websocket.WebSocketApp("ws://" + args.server + "/ws", on_message=on_message, on_error=on_error, on_close=on_close)
+        ws = websocket.WebSocketApp("ws://" + args.server + "/ws", on_message=on_message, on_error=on_error, on_close=on_close, cookie="pxls-agegate=1")
     except:
         if args.verbose or args.veryverbose:
             log("Connection failed, retrying ...")
