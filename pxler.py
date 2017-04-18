@@ -72,7 +72,7 @@ def use_boarddata(array, width, height):
     counter = 0
     for x in range(0, width):
         for y in range(0, height):
-            place_pixel(x, y, array[counter])
+            world[x][y] = color_palette[array[counter]]
             counter += 1
 
 def create_palette(array):
