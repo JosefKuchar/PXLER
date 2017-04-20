@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 import websocket
-import _thread
+import threading
 import numpy
 import colorama
 import signal
@@ -106,16 +106,6 @@ def on_open(websoc):
     global READY
     READY = True
 
-def run():
-    """ Screenshot thread """
-    while True:
-        if READY:
-            if args.verbose or args.veryverbose:
-                log("Taking screenshot ...")
-            img = Image.fromarray(world, "RGB")
-            img.save(PATH + "/" + time.strftime("%Y%m%d-%H%M%S") + "." + args.format, quality=args.quality)
-        time.sleep(args.framerate)
-
 def on_close(websoc):
     """ Websocket connection close handler """
     if args.verbose or args.veryverbose:
@@ -128,10 +118,26 @@ def exit_handler(signal, frame):
 
 signal.signal(signal.SIGINT, exit_handler)
 
+class ScreenshotThread(threading.Thread):
+    """ Screenshot thread class """
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        while True:
+            if READY:
+                if args.verbose or args.veryverbose:
+                    log("Taking screenshot ...")
+                img = Image.fromarray(world, "RGB")
+                img.save(PATH + "/" + time.strftime("%Y%m%d-%H%M%S") + "." + args.format, quality=args.quality)
+            time.sleep(args.framerate)
+
+screenshoter = ScreenshotThread()
+screenshoter.daemon = True
+screenshoter.start()
+
 if args.veryverbose:
     websocket.enableTrace(True)
-
-_thread.start_new_thread(run, ())
 
 while True:
     # Download info file with width, height and palette
