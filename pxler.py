@@ -195,7 +195,7 @@ while True:
         log("Connecting to the server ...")
 
     try:
-        ws = websocket.WebSocketApp("ws://" + args.server + "/ws", on_message=on_message, on_error=on_error, on_close=on_close, cookie="pxls-agegate=1")
+        ws = websocket.WebSocketApp("wss://" + args.server + "/ws", on_message=on_message, on_error=on_error, on_close=on_close, cookie="pxls-agegate=1")
     except:
         if args.verbose or args.veryverbose:
             log("Connection failed, retrying ...")
